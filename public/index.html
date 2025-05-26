@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="main-box">
+        <div class="OTP-container">
+            <div id="OTP"></div>
+            <p id="expiry"></p>
+            <button>Generate OTP</button>
+
+            <div class="validator-box">
+                <h3>Validate OTP</h3>
+                <form action="/api/validate" method="POST">
+                    <input type="text" name="otp" placeholder="Enter OTP" required>
+                    <button id="valid-btn" type="submit">Validate</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const btn = document.querySelector('button');
+        let otpTimeout = null;
+
+        btn.addEventListener('click', () => {
+            const otp = document.getElementById('OTP');
+            fetch('/api/otp').then(response => response.json()).then(data => {
+                otp.innerHTML = data.otp;
+                const expiry = document.getElementById('expiry');
+                const expiryTime = new Date(data.expiry);
+                expiry.innerHTML = `Expires at: ${expiryTime.toLocaleTimeString()}`;
+
+                if (otpTimeout)
+                    clearTimeout(otpTimeout);
+                otpTimeout = setTimeout(() => {
+                    otp.innerHTML = 'OTP expired';
+                    expiry.innerHTML = '';
+                }, data.expiry - Date.now());
+
+            }).catch(error => {
+                console.error('Error fetching OTP:', error);
+                otp.innerHTML = 'Error generating OTP';
+            })
+        })
+        // Handle OTP validation
+        document.querySelector('.validator-box form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const otpInput = this.otp.value;
+            fetch('/api/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `otp=${encodeURIComponent(otpInput)}`
+            })
+                .then(res => res.json())
+                .then(data => {
+                    alert(data.message);
+                })
+                .catch(err => {
+                    alert('Error validating OTP');
+                });
+        });
+    </script>
+
+</body>
+
+</html>
